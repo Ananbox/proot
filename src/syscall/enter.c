@@ -579,7 +579,17 @@ int translate_syscall_enter(Tracee *tracee)
 			set_sysnum(tracee, PR_void);
 			status = 0;
 		}
+                // ananbox: bypass PR_CAPBSET_DROP because we have no CAP_SETPCAP capability
+                else if (peek_reg(tracee, CURRENT, SYSARG_1) == PR_CAPBSET_DROP) {
+			set_sysnum(tracee, PR_getuid);
+			status = 0;
+		}
 		break;
+        case PR_unshare:
+                // ananbox: bypass unshare syscall
+                set_sysnum(tracee, PR_getuid);
+                status = 0;
+                break;
 	}
 
 end:

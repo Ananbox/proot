@@ -28,6 +28,7 @@
 #include <limits.h>      /* PATH_MAX, */
 #include <string.h>      /* strcpy */
 #include <sys/prctl.h>   /* PR_SET_DUMPABLE */
+#include <sys/mount.h>   /* MS_BIND */
 #include "syscall/syscall.h"
 #include "syscall/sysnum.h"
 #include "syscall/socket.h"
@@ -489,6 +490,7 @@ int translate_syscall_enter(Tracee *tracee)
 
 	case PR_mount:
 		status = get_sysarg_path(tracee, path, SYSARG_1);
+                flags = peek_reg(tracee, CURRENT, SYSARG_4);
 		if (status < 0)
 			break;
 
@@ -499,7 +501,21 @@ int translate_syscall_enter(Tracee *tracee)
 				break;
 		}
 
-		status = translate_sysarg(tracee, SYSARG_2, REGULAR);
+                status = translate_sysarg(tracee, SYSARG_2, REGULAR);
+                if (status < 0)
+                    break;
+
+                if (flags & MS_BIND) {
+                    char src[PATH_MAX], dest[PATH_MAX];
+
+                    get_sysarg_path(tracee, src, SYSARG_1);
+                    get_sysarg_path(tracee, dest, SYSARG_2);
+                    if (insort_binding3(tracee, tracee->ctx, src, dest) == NULL)
+                        status = -1;
+                    else
+                        set_sysnum(tracee, PR_getuid);
+                }
+
 		break;
 
 	case PR_openat:

@@ -359,6 +359,11 @@ int event_loop()
 			}
 			break;
 		}
+                siginfo_t siginfo;
+                memset(&siginfo, 0, sizeof(siginfo_t));
+                ptrace(PTRACE_GETSIGINFO, pid, NULL, &siginfo);
+                if (siginfo.si_signo == 31 && siginfo.si_code == 1)
+                    note(NULL, ERROR, SYSTEM, "bad syscall, si_syscall: %d, si_arch: %u", siginfo.si_syscall, siginfo.si_arch);
 
 		/* Get information about this tracee. */
 		tracee = get_tracee(NULL, pid, true);
